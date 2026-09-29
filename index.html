@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Pages Test - Hello World</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      padding: 20px;
+      transition: background 0.5s ease;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      color: #94a3b8;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .clock {
+      font-family: monospace;
+      font-size: 1.1rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px 16px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 28px;
+      color: #38bdf8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .counter-display {
+      margin-top: 24px;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      GitHub Pages Connected
+    </div>
+
+    <h1>Hello, World! 👋</h1>
+    <p>If you see this page on your <code>github.io</code> link, your GitHub Pages deployment is functioning properly.</p>
+
+    <div class="clock" id="liveClock">00:00:00</div>
+
+    <div class="actions">
+      <button id="clickBtn">Click Me (+1)</button>
+      <button id="colorBtn" class="secondary">Change Theme</button>
+    </div>
+
+    <div class="counter-display">
+      Total Clicks: <strong id="counter" style="color: #38bdf8;">0</strong>
+    </div>
+  </div>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Click Counter
+    let count = 0;
+    const countDisplay = document.getElementById('counter');
+    document.getElementById('clickBtn').addEventListener('click', () => {
+      count++;
+      countDisplay.textContent = count;
+    });
+
+    // Theme Background Switcher
+    const gradients = [
+      'linear-gradient(135deg, #0f172a, #1e293b)',
+      'linear-gradient(135deg, #1e1b4b, #312e81)',
+      'linear-gradient(135deg, #064e3b, #047857)',
+      'linear-gradient(135deg, #701a75, #4a044e)'
+    ];
+    let gradientIndex = 0;
+
+    document.getElementById('colorBtn').addEventListener('click', () => {
+      gradientIndex = (gradientIndex + 1) % gradients.length;
+      document.body.style.background = gradients[gradientIndex];
+    });
+  </script>
+</body>
+</html>
