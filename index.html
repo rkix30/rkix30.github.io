@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KINGFISHER — Cinematic Prompt Library</title>
+  
+  <!-- Fonts: Instrument Serif, Manrope, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* -------------------------------------------------------------
+       DESIGN SYSTEM TOKENS
+       ------------------------------------------------------------- */
+    :root {
+      --bg: #B6C3B0;
+      --paper: #E3E8DE;
+      --ink: #10201F;
+      --ink-2: #2E3D3A;
+      --ink-3: #4E5E58;
+      --line: rgba(16, 32, 31, 0.14);
+      --ghost: #ADBAA7;
+      --orange: #E8732A;
+      --orange-2: #F3A15E;
+      --teal: #0E7C86;
+      --panel: #0F1D1C;
+      --panel-2: #172A28;
+      
+      --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+      
+      --font-serif: "Instrument Serif", Garamond, Georgia, "Times New Roman", serif;
+      --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg);
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font-family: inherit;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+
+    /* -------------------------------------------------------------
+       HERO CONTAINER (100svh)
+       ------------------------------------------------------------- */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100svh;
+      min-height: 640px;
+      overflow: hidden;
+      background-color: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Video: covers viewport, sits at base level */
+    .hero-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* THE TRICK: Word behind the bird via mix-blend-mode */
+    .giant-watermark {
+      position: absolute;
+      top: 13vh;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-serif);
+      font-size: clamp(90px, 17vw, 300px);
+      line-height: 0.85;
+      font-weight: 400;
+      color: var(--ghost);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      mix-blend-mode: darken;
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 38%, rgba(0, 0, 0, 0.35) 62%, transparent 86%);
+      mask-image: linear-gradient(180deg, #000 0%, #000 38%, rgba(0, 0, 0, 0.35) 62%, transparent 86%);
+    }
+
+    .giant-watermark em {
+      font-style: italic;
+    }
+
+    /* Legibility Overlays */
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      background: 
+        linear-gradient(90deg, var(--bg) 0%, rgba(182, 195, 176, 0.70) 24%, rgba(182, 195, 176, 0) 42%),
+        linear-gradient(0deg, var(--bg) 0%, rgba(182, 195, 176, 0.55) 18%, rgba(182, 195, 176, 0) 38%);
+    }
+
+    /* -------------------------------------------------------------
+       HERO UI LAYER & CHOREOGRAPHY (.rv items)
+       ------------------------------------------------------------- */
+    .hero-ui {
+      position: relative;
+      z-index: 4;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 36px 20px;
+    }
+
+    .rv {
+      opacity: 0;
+      transform: translateY(18px);
+      filter: blur(6px);
+      transition: opacity 0.9s var(--ease), transform 0.9s var(--ease), filter 0.9s var(--ease);
+      transition-delay: calc(var(--d, 0) * 90ms);
+    }
+
+    .hero.is-revealed .rv {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+
+    /* -------------------------------------------------------------
+       NAVBAR
+       ------------------------------------------------------------- */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-name {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      color: var(--ink);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--ink-2);
+    }
+
+    .nav-links a {
+      transition: color 0.2s ease;
+      position: relative;
+    }
+
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+
+    .nav-links .dot {
+      color: var(--line);
+      margin: 0 4px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      font-weight: 500;
+      color: var(--ink-2);
+      transition: color 0.2s;
+    }
+
+    .btn-text:hover {
+      color: var(--ink);
+    }
+
+    .btn-pill-dark {
+      background: var(--panel);
+      color: var(--paper);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 999px;
+      box-shadow: 0 8px 20px -4px rgba(16, 32, 31, 0.3);
+      transition: transform 0.2s var(--ease), background-color 0.2s ease;
+    }
+
+    .btn-pill-dark:hover {
+      background: var(--panel-2);
+      transform: translateY(-1px);
+    }
+
+    /* -------------------------------------------------------------
+       HERO MAIN BODY
+       ------------------------------------------------------------- */
+    .hero-body {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 32px;
+      margin-top: auto;
+      margin-bottom: 24px;
+      padding-top: 76px; /* pushed down to clear the giant watermark */
+    }
+
+    .hero-left {
+      max-width: 470px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--ink-3);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-rule {
+      display: inline-block;
+      width: 28px;
+      height: 1px;
+      background: var(--ink-3);
+      opacity: 0.7;
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(44px, 4.8vw, 76px);
+      line-height: 0.95;
+      font-weight: 400;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin-bottom: 18px;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--teal);
+    }
+
+    .hero-lede {
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink-2);
+      margin-bottom: 26px;
+      font-weight: 400;
+      max-width: 420px;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .btn-orange-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange-2) 100%);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 7px 10px 7px 22px;
+      border-radius: 999px;
+      box-shadow: 0 10px 24px -6px rgba(232, 115, 42, 0.45);
+      transition: transform 0.25s var(--ease), box-shadow 0.25s ease;
+    }
+
+    .btn-orange-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -6px rgba(232, 115, 42, 0.55);
+    }
+
+    .btn-orange-pill .arrow-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-orange-pill:hover .arrow-circle {
+      transform: translateX(2px);
+    }
+
+    .cta-link-secondary {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1px;
+      transition: opacity 0.2s;
+    }
+
+    .cta-link-secondary:hover {
+      opacity: 0.7;
+    }
+
+    /* Right cluster */
+    .hero-right {
+      width: min(400px, 34vw);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .trust-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar-stack {
+      display: flex;
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--bg);
+      margin-left: -7px;
+    }
+
+    .avatar:first-child {
+      margin-left: 0;
+    }
+
+    .avatar-1 { background: linear-gradient(135deg, #1b3834, #2d5a53); }
+    .avatar-2 { background: linear-gradient(135deg, #0e7c86, #5ab5be); }
+    .avatar-3 { background: linear-gradient(135deg, #e8732a, #f7ba8b); }
+    .avatar-4 { background: linear-gradient(135deg, #243330, #697d77); }
+
+    .trust-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--ink-3);
+      text-transform: uppercase;
+    }
+
+    .cards-row {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .dark-card {
+      flex: 1;
+      background: var(--panel);
+      color: var(--paper);
+      border-radius: 20px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px -12px rgba(10, 20, 19, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dark-card.drop-card {
+      margin-top: 18px;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: rgba(227, 232, 222, 0.6);
+      text-transform: uppercase;
+    }
+
+    .card-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .card-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .card-dot.active {
+      background: var(--orange);
+    }
+
+    .card-thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      background: radial-gradient(circle at 40% 40%, rgba(14, 124, 134, 0.45), rgba(232, 115, 42, 0.25) 75%, #0b1514);
+    }
+
+    .card-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.8s var(--ease);
+    }
+
+    .card-canvas.is-drawn {
+      opacity: 1;
+    }
+
+    .thumb-caption {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 18px 8px 6px;
+      background: linear-gradient(0deg, rgba(10, 18, 17, 0.95) 0%, transparent 100%);
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      letter-spacing: 0.12em;
+      color: rgba(227, 232, 222, 0.8);
+      z-index: 2;
+    }
+
+    .card-stat {
+      font-family: var(--font-serif);
+      font-size: 21px;
+      line-height: 1.1;
+      color: var(--paper);
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+
+    .card-stat em {
+      font-style: italic;
+      color: var(--orange-2);
+    }
+
+    /* -------------------------------------------------------------
+       HERO BOTTOM STRIP
+       ------------------------------------------------------------- */
+    .bottom-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: var(--ink-2);
+      text-transform: uppercase;
+    }
+
+    .species-label em {
+      font-family: var(--font-serif);
+      font-style: italic;
+      text-transform: none;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+      margin-left: 6px;
+    }
+
+    .btn-replay {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.16em;
+      color: var(--ink);
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .btn-replay:hover {
+      background: rgba(255, 255, 255, 0.55);
+      transform: scale(1.02);
+    }
+
+    .btn-replay svg {
+      width: 10px;
+      height: 10px;
+      fill: currentColor;
+    }
+
+    /* -------------------------------------------------------------
+       BELOW THE FOLD: "WHY A KINGFISHER"
+       ------------------------------------------------------------- */
+    .field-notes-section {
+      position: relative;
+      background-color: var(--paper);
+      color: var(--ink);
+      padding: 120px 36px 90px;
+      overflow: hidden;
+    }
+
+    /* Transition gradient from hero backdrop to paper */
+    .transition-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--paper) 100%);
+      border-top: 1px solid var(--line);
+      pointer-events: none;
+    }
+
+    .section-wrap {
+      position: relative;
+      max-width: 1240px;
+      margin: 0 auto;
+      z-index: 2;
+    }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 48px;
+      margin-bottom: 72px;
+      align-items: end;
+    }
+
+    .section-kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--ink-3);
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .section-kicker .kicker-num {
+      color: var(--orange);
+      font-weight: 500;
+    }
+
+    .section-h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(40px, 5.2vw, 78px);
+      line-height: 0.98;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .section-desc {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      max-width: 440px;
+    }
+
+    /* Bento Grid */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 72px;
+    }
+
+    .bento-card {
+      border-radius: 22px;
+      padding: 30px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-light {
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(16, 32, 31, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .card-dark-tall {
+      grid-row: span 2;
+      background: var(--panel);
+      color: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 24px 48px -12px rgba(16, 32, 31, 0.25);
+    }
+
+    .card-span-2 {
+      grid-column: span 2;
+    }
+
+    .bento-index {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--ink-3);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-dark-tall .bento-index {
+      color: rgba(227, 232, 222, 0.5);
+    }
+
+    .bento-h3 {
+      font-family: var(--font-serif);
+      font-size: clamp(26px, 2.4vw, 36px);
+      line-height: 1.05;
+      font-weight: 400;
+      margin-bottom: 12px;
+      color: inherit;
+    }
+
+    .bento-p {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink-2);
+    }
+
+    .card-dark-tall .bento-p {
+      color: rgba(227, 232, 222, 0.75);
+    }
+
+    /* Visual 1: SVG Dive Arc */
+    .arc-visual {
+      margin-top: 36px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dive-svg {
+      width: 100%;
+      height: 140px;
+      overflow: visible;
+    }
+
+    .dive-path {
+      stroke: var(--orange);
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 400;
+      stroke-dashoffset: 400;
+      transition: stroke-dashoffset 1.8s var(--ease);
+    }
+
+    .is-in-view .dive-path {
+      stroke-dashoffset: 0;
+    }
+
+    .dive-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      fill: rgba(227, 232, 222, 0.5);
+    }
+
+    /* Visual 2: Swatch chips */
+    .chips-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .chip {
+      flex: 1;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: flex-end;
+      padding: 4px 6px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .chip-1 { background: #0E7C86; }
+    .chip-2 { background: #1B4E89; }
+    .chip-3 { background: #112826; }
+
+    /* Visual 3: Target SVG */
+    .target-box {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .target-svg {
+      width: 130px;
+      height: 70px;
+    }
+
+    /* -------------------------------------------------------------
+       STATS BAND & FINAL CALL TO ACTION
+       ------------------------------------------------------------- */
+    .stats-band {
+      background: var(--panel);
+      color: var(--paper);
+      border-radius: 24px;
+      padding: 40px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+      margin-bottom: 72px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 28px 60px -16px rgba(10, 20, 19, 0.5);
+    }
+
+    .stat-cell {
+      position: relative;
+    }
+
+    .stat-cell:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 10%;
+      right: -16px;
+      height: 80%;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: rgba(227, 232, 222, 0.5);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-val {
+      font-family: var(--font-serif);
+      font-size: clamp(34px, 3.2vw, 48px);
+      line-height: 1;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-val em {
+      font-style: italic;
+      color: var(--orange-2);
+    }
+
+    /* Progress bar */
+    .ruler-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .ruler-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--teal);
+      border-radius: 2px;
+      transition: width 1.4s var(--ease);
+    }
+
+    .is-in-view .ruler-fill {
+      width: 80%;
+    }
+
+    /* Weight dots */
+    .weight-viz {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .circle-solid {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--paper);
+    }
+
+    .circle-dashed {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(227, 232, 222, 0.4);
+    }
+
+    /* Spectral shimmer bar */
+    .shimmer-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--teal), #1F5494, #0A242B);
+      margin-top: 8px;
+    }
+
+    /* Strike mini curve */
+    .strike-svg {
+      width: 80px;
+      height: 20px;
+      margin-top: 4px;
+    }
+
+    .strike-line {
+      stroke: var(--orange);
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      transition: stroke-dashoffset 1.2s var(--ease);
+    }
+
+    .is-in-view .strike-line {
+      stroke-dashoffset: 0;
+    }
+
+    /* Closing section call to action */
+    .closing-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+
+    .closing-text {
+      font-family: var(--font-serif);
+      font-size: clamp(28px, 3.2vw, 44px);
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .closing-text em {
+      font-style: italic;
+      color: var(--teal);
+    }
+
+    /* -------------------------------------------------------------
+       SCROLL REVEAL OBSERVER HOOKS
+       ------------------------------------------------------------- */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+    }
+
+    .reveal-on-scroll.is-in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* -------------------------------------------------------------
+       RESPONSIVE (<= 900px)
+       ------------------------------------------------------------- */
+    @media (max-width: 900px) {
+      .hero-ui {
+        padding: 20px 16px 16px;
+      }
+
+      .nav-links, .btn-text {
+        display: none;
+      }
+
+      .giant-watermark {
+        font-size: 22vw;
+        top: 8vh;
+      }
+
+      .hero {
+        height: auto;
+        min-height: 100svh;
+        overflow-y: visible;
+      }
+
+      .hero-overlay {
+        background: linear-gradient(0deg, var(--bg) 0%, rgba(182, 195, 176, 0.85) 45%, rgba(182, 195, 176, 0) 80%);
+      }
+
+      .hero-body {
+        flex-direction: column;
+        align-items: flex-start;
+        padding-top: 46svh; /* flow below the perched bird */
+        gap: 40px;
+        margin-bottom: 32px;
+      }
+
+      .hero-right {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .cards-row {
+        width: 100%;
+      }
+
+      .dark-card.drop-card {
+        margin-top: 0; /* remove drop on mobile */
+      }
+
+      .bottom-strip {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .bottom-strip .btn-replay {
+        align-self: flex-start;
+      }
+
+      .field-notes-section {
+        padding: 80px 16px 60px;
+      }
+
+      .section-header {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card-dark-tall {
+        grid-row: auto;
+      }
+
+      .card-span-2 {
+        grid-column: auto;
+      }
+
+      .stats-band {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 24px;
+        gap: 24px;
+      }
+
+      .stat-cell:nth-child(2)::after {
+        display: none;
+      }
+
+      .closing-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      .rv, .reveal-on-scroll, .dive-path, .ruler-fill, .strike-line {
+        transition: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+        stroke-dashoffset: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================
+       HERO (100svh)
+       ========================================================= -->
+  <section class="hero" id="hero">
+    
+    <!-- 1. Native Video Element -->
+    <video 
+      id="heroVideo" 
+      class="hero-video" 
+      src="https://thinkingods.com/demos/kingfisher-hero/hero.mp4" 
+      muted 
+      playsinline 
+      preload="auto">
+    </video>
+
+    <!-- 2. The Word Behind the Bird -->
+    <div class="giant-watermark" aria-hidden="true">
+      King<em>fisher</em>
+    </div>
+
+    <!-- 3. Soft Legibility Gradient Overlays -->
+    <div class="hero-overlay"></div>
+
+    <!-- 4. Interactive & Typographic UI Layer -->
+    <div class="hero-ui">
+      
+      <!-- Top Navigation -->
+      <nav class="nav rv" style="--d: 0;">
+        <div class="brand">
+          <div class="brand-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M4 16C8 16 11 13 13 9L21 4L17 12C15 16 12 19 6 20L4 16Z" fill="#10201F" />
+              <path d="M13 9L18 10L14 14C13 12 13 10.5 13 9Z" fill="#E8732A" />
+            </svg>
+          </div>
+          <span class="brand-name">KINGFISHER</span>
+        </div>
+
+        <div class="nav-links">
+          <a href="#library">LIBRARY</a>
+          <span class="dot">·</span>
+          <a href="#templates">TEMPLATES</a>
+          <span class="dot">·</span>
+          <a href="#notes">PROMPTS</a>
+          <span class="dot">·</span>
+          <a href="#pricing">PRICING</a>
+        </div>
+
+        <div class="nav-actions">
+          <a href="#signin" class="btn-text">SIGN IN</a>
+          <a href="#access" class="btn-pill-dark">GET ACCESS</a>
+        </div>
+      </nav>
+
+      <!-- Centered / Pushed Down Hero Body -->
+      <div class="hero-body">
+        
+        <!-- Left: Copy & Actions -->
+        <div class="hero-left">
+          <div class="eyebrow rv" style="--d: 1;">
+            <span class="eyebrow-rule"></span>
+            CINEMATIC PROMPT LIBRARY
+          </div>
+
+          <h1 class="hero-title rv" style="--d: 2;">
+            Websites that land with <em>precision</em>
+          </h1>
+
+          <p class="hero-lede rv" style="--d: 3;">
+            Curated prompt sequences, physics tokens, and art-directed choreographies engineered for modern screen directors.
+          </p>
+
+          <div class="hero-cta-group rv" style="--d: 4;">
+            <a href="#access" class="btn-orange-pill">
+              <span>Start Exploring</span>
+              <span class="arrow-circle">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M3.5 8H12.5M12.5 8L8 3.5M12.5 8L8 12.5" stroke="#FFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </a>
+            <a href="#watch" class="cta-link-secondary">Watch a build ↗</a>
+          </div>
+        </div>
+
+        <!-- Right: Social Proof & Final Frame Crops -->
+        <div class="hero-right">
+          
+          <div class="trust-row rv" style="--d: 5;">
+            <div class="avatar-stack">
+              <div class="avatar avatar-1"></div>
+              <div class="avatar avatar-2"></div>
+              <div class="avatar avatar-3"></div>
+              <div class="avatar avatar-4"></div>
+            </div>
+            <span class="trust-label">Used by 2,400+ creative technologists</span>
+          </div>
+
+          <div class="cards-row">
+            <!-- Card 01: Head Crop -->
+            <div class="dark-card rv" style="--d: 6;">
+              <div class="card-top">
+                <span class="card-tag">PROMPTS / 01</span>
+                <div class="card-dots">
+                  <span class="card-dot active"></span>
+                  <span class="card-dot"></span>
+                  <span class="card-dot"></span>
+                </div>
+              </div>
+              
+              <div class="card-thumb-wrap">
+                <canvas 
+                  class="card-canvas" 
+                  id="canvasCard1" 
+                  width="220" 
+                  height="220" 
+                  data-crop="0.555,0.335,0.22">
+                </canvas>
+                <div class="thumb-caption">FOCUSED BEAK · CROP 01</div>
+              </div>
+
+              <div class="card-stat">Copy <em>·</em> Paste</div>
+            </div>
+
+            <!-- Card 02: Wing Crop (Dropped 18px) -->
+            <div class="dark-card drop-card rv" style="--d: 7;">
+              <div class="card-top">
+                <span class="card-tag">MOTION / 02</span>
+                <div class="card-dots">
+                  <span class="card-dot active"></span>
+                  <span class="card-dot"></span>
+                  <span class="card-dot"></span>
+                </div>
+              </div>
+
+              <div class="card-thumb-wrap">
+                <canvas 
+                  class="card-canvas" 
+                  id="canvasCard2" 
+                  width="220" 
+                  height="220" 
+                  data-crop="0.43,0.60,0.24">
+                </canvas>
+                <div class="thumb-caption">FLIGHT DYNAMICS · CROP 02</div>
+              </div>
+
+              <div class="card-stat">60<em>fps</em></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Bottom Species Strip -->
+      <div class="bottom-strip rv" style="--d: 8;">
+        <div class="species-label">
+          SPECIES 01 <em>Alcedo atthis</em>
+        </div>
+
+        <div class="coord-label">
+          DELHI NCR · 28.61° N
+        </div>
+
+        <button class="btn-replay" id="btnReplay" aria-label="Replay Landing Sequence">
+          <svg viewBox="0 0 16 16">
+            <path d="M8 2.5a5.5 5.5 0 1 0 5.46 6.18.75.75 0 0 0-1.48-.24A4 4 0 1 1 8 4a3.97 3.97 0 0 1 2.83 1.17L9.25 6.75H13V3l-1.35 1.35A5.47 5.47 0 0 0 8 2.5Z"/>
+          </svg>
+          REPLAY LANDING
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       BELOW THE FOLD: "WHY A KINGFISHER"
+       ========================================================= -->
+  <section class="field-notes-section" id="notes">
+    <div class="transition-gradient"></div>
+
+    <div class="section-wrap">
+      
+      <!-- Section Header -->
+      <div class="section-header reveal-on-scroll">
+        <div>
+          <span class="section-kicker"><span class="kicker-num">02</span> FIELD NOTES — WHY A KINGFISHER</span>
+          <h2 class="section-h2">It waits, reads the water, then lands in one clean motion.</h2>
+        </div>
+        <p class="section-desc">
+          High-end web craftsmanship mirrors biological evolution. Kingfishers eliminate fluid resistance and optical distortion through pure structural design. We build design prompts the exact same way.
+        </p>
+      </div>
+
+      <!-- Bento Grid of 4 Notes -->
+      <div class="bento-grid">
+        
+        <!-- Note 01 (Dark, 2 Rows): Shinkansen Beak -->
+        <div class="bento-card card-dark-tall reveal-on-scroll">
+          <div>
+            <div class="bento-index">NOTE 01 · AERODYNAMICS</div>
+            <h3 class="bento-h3">The beak that reshaped the Shinkansen</h3>
+            <p class="bento-p">
+              When Japan's 500-Series bullet train exited tunnels, atmospheric pressure created thunderous micro-barometric sonic booms. Chief engineer and birder Eiji Nakatsu remodeled the train’s nose cone after the kingfisher's beak, dampening shockwaves and trimming power use by 15%.
+            </p>
+          </div>
+
+          <div class="arc-visual">
+            <svg class="dive-svg" viewBox="0 0 320 140">
+              <path class="dive-path" d="M 20 20 Q 180 25 300 120" />
+              <circle cx="20" cy="20" r="4" fill="#E8732A" />
+              <circle cx="300" cy="120" r="4" fill="#0E7C86" />
+              <text x="24" y="16" class="dive-label">PERCH</text>
+              <text x="250" y="125" class="dive-label">ENTRY</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Note 02: Structural Color -->
+        <div class="bento-card card-light reveal-on-scroll">
+          <div>
+            <div class="bento-index">NOTE 02 · INTERFERENCE</div>
+            <h3 class="bento-h3">Structural color, zero pigment</h3>
+            <p class="bento-p">
+              The kingfisher's electric azure plumage contains no blue pigment whatsoever. Microscopic spongy feather barbules scatter light via Tyndall interference, reflecting only pure cyan.
+            </p>
+          </div>
+
+          <div class="chips-row">
+            <div class="chip chip-1">#0E7C86</div>
+            <div class="chip chip-2">#1B4E89</div>
+            <div class="chip chip-3">#112826</div>
+          </div>
+        </div>
+
+        <!-- Note 03: Nictitating Membrane -->
+        <div class="bento-card card-light reveal-on-scroll">
+          <div>
+            <div class="bento-index">NOTE 03 · REFRACTION</div>
+            <h3 class="bento-h3">The nictitating membrane</h3>
+            <p class="bento-p">
+              Entering the water creates immediate focal distortion. A translucent third eyelid covers the cornea at impact, acting as an auxiliary liquid-contact lens to maintain pinpoint visual tracking underwater.
+            </p>
+          </div>
+          <div style="margin-top: 24px; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);">
+            OPTICAL CORRECTION: +2.4 DIOPTERS
+          </div>
+        </div>
+
+        <!-- Note 04 (Spans 2 columns): Waiting Still -->
+        <div class="bento-card card-light card-span-2 reveal-on-scroll">
+          <div style="display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap;">
+            <div style="max-width: 480px;">
+              <div class="bento-index">NOTE 04 · STILLNESS</div>
+              <h3 class="bento-h3">Stillness until maximum certainty</h3>
+              <p class="bento-p">
+                A kingfisher spends up to 85% of its hunting cycle completely motionless on a branch. It recalculates water depth, angular surface refraction, and current velocity before expending a single wingbeat.
+              </p>
+            </div>
+            
+            <div class="target-box">
+              <svg class="target-svg" viewBox="0 0 140 70">
+                <circle cx="70" cy="35" r="28" fill="none" stroke="rgba(16,32,31,0.2)" stroke-width="1.5" />
+                <circle cx="70" cy="35" r="14" fill="none" stroke="rgba(16,32,31,0.3)" stroke-width="1.5" />
+                <circle cx="70" cy="35" r="3" fill="var(--orange)" />
+                <line x1="20" y1="35" x2="120" y2="35" stroke="rgba(16,32,31,0.18)" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="70" y1="5" x2="70" y2="65" stroke="rgba(16,32,31,0.18)" stroke-width="1" stroke-dasharray="3 3"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Stats Band -->
+      <div class="stats-band reveal-on-scroll">
+        <div class="stat-cell">
+          <span class="stat-sub">LENGTH</span>
+          <div class="stat-val">16 <span>cm</span></div>
+          <div class="ruler-track">
+            <div class="ruler-fill"></div>
+          </div>
+        </div>
+
+        <div class="stat-cell">
+          <span class="stat-sub">WEIGHT</span>
+          <div class="stat-val">~40 <span>g</span></div>
+          <div class="weight-viz">
+            <div class="circle-solid"></div>
+            <div class="circle-dashed"></div>
+            <span style="font-family: var(--font-mono); font-size: 9px; color: rgba(227,232,222,0.5);">BALANCED RATIO</span>
+          </div>
+        </div>
+
+        <div class="stat-cell">
+          <span class="stat-sub">COLOR PIGMENT</span>
+          <div class="stat-val">Zero</div>
+          <div class="shimmer-bar"></div>
+        </div>
+
+        <div class="stat-cell">
+          <span class="stat-sub">STRIKE MOTION</span>
+          <div class="stat-val"><em>One</em> dive</div>
+          <svg class="strike-svg" viewBox="0 0 80 20">
+            <path class="strike-line" d="M 2 4 Q 40 18 78 8" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Closing Call To Action -->
+      <div class="closing-row reveal-on-scroll">
+        <div class="closing-text">
+          Ready to make your interfaces <em>land</em>?
+        </div>
+        <a href="#access" class="btn-orange-pill">
+          <span>Get Access to Library</span>
+          <span class="arrow-circle">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3.5 8H12.5M12.5 8L8 3.5M12.5 8L8 12.5" stroke="#FFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       INLINE ENGINE & CHOREOGRAPHY
+       ========================================================= -->
+  <script>
+    (function() {
+      // Core timing constant: moment the kingfisher settles on the branch
+      const REVEAL_AT = 4.3; // in seconds
+
+      const video = document.getElementById('heroVideo');
+      const hero = document.getElementById('hero');
+      const btnReplay = document.getElementById('btnReplay');
+      const cardCanvas1 = document.getElementById('canvasCard1');
+      const cardCanvas2 = document.getElementById('canvasCard2');
+      
+      let isRevealed = false;
+      let hasSampledPixel = false;
+      let hasCapturedThumbnails = false;
+
+      // 1. DYNAMIC COLOR EXTRACTION ON LOADED DATA
+      function syncBackdropWithFootage() {
+        if (hasSampledPixel) return;
+        try {
+          const offscreenCanvas = document.createElement('canvas');
+          offscreenCanvas.width = 1;
+          offscreenCanvas.height = 1;
+          const ctx = offscreenCanvas.getContext('2d');
+          
+          // Sample patch from top-right corner (94% x, 12% y)
+          const vw = video.videoWidth || 1920;
+          const vh = video.videoHeight || 1080;
+          const sx = Math.floor(vw * 0.94);
+          const sy = Math.floor(vh * 0.12);
+          
+          ctx.drawImage(video, sx, sy, 1, 1, 0, 0, 1, 1);
+          const pixel = ctx.getImageData(0, 0, 1, 1).data;
+          
+          if (pixel && pixel[3] > 0) {
+            const r = pixel[0];
+            const g = pixel[1];
+            const b = pixel[2];
+            
+            const sampledBg = `rgb(${r}, ${g}, ${b})`;
+            // --ghost: color x 0.955
+            const gr = Math.round(r * 0.955);
+            const gg = Math.round(g * 0.955);
+            const gb = Math.round(b * 0.955);
+            const sampledGhost = `rgb(${gr}, ${gg}, ${gb})`;
+            
+            document.documentElement.style.setProperty('--bg', sampledBg);
+            document.documentElement.style.setProperty('--ghost', sampledGhost);
+            hasSampledPixel = true;
+          }
+        } catch (err) {
+          // Pixel readback throws on file:// or cross-origin restrictions; fall back cleanly to CSS tokens
+          // (Handled automatically by :root values)
+        }
+      }
+
+      // 2. VIDEO THUMBNAIL CROPPING (Works on file:// because it does not require getImageData)
+      function extractCardThumbnail(canvas) {
+        if (!canvas || !video) return;
+        try {
+          const cropData = canvas.dataset.crop; // format: "x,y,size"
+          if (!cropData) return;
+          const [fx, fy, fsize] = cropData.split(',').map(Number);
+          
+          const vw = video.videoWidth || 1920;
+          const vh = video.videoHeight || 1080;
+          
+          // Calculate pixel box
+          const cropW = vw * fsize;
+          const cropH = cropW; // Square crop
+          const cropX = Math.max(0, Math.min(vw - cropW, (vw * fx) - (cropW / 2)));
+          const cropY = Math.max(0, Math.min(vh - cropH, (vh * fy) - (cropH / 2)));
+          
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+          canvas.classList.add('is-drawn');
+        } catch (e) {
+          // Keep radial placeholder if video is not accessible
+        }
+      }
+
+      function updateThumbnails() {
+        if (hasCapturedThumbnails) return;
+        extractCardThumbnail(cardCanvas1);
+        extractCardThumbnail(cardCanvas2);
+        hasCapturedThumbnails = true;
+      }
+
+      // 3. REVEAL TRIGGER
+      function triggerReveal() {
+        if (isRevealed) return;
+        isRevealed = true;
+        hero.classList.add('is-revealed');
+        updateThumbnails();
+      }
+
+      // Handle Reduced Motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) {
+        triggerReveal();
+      }
+
+      // Video Event Listeners
+      video.addEventListener('loadeddata', () => {
+        syncBackdropWithFootage();
+      });
+
+      video.addEventListener('timeupdate', () => {
+        if (video.currentTime >= REVEAL_AT) {
+          triggerReveal();
+        }
+      });
+
+      // Fail-safes: never leave hero empty
+      video.addEventListener('ended', () => {
+        triggerReveal();
+      });
+
+      video.addEventListener('error', () => {
+        triggerReveal();
+      });
+
+      // Hard timeout fallback: 9s
+      const fallbackTimer = setTimeout(() => {
+        triggerReveal();
+      }, 9000);
+
+      // Play management
+      function beginPlayback() {
+        syncBackdropWithFootage();
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Autoplay rejected: trigger reveal so page is usable
+            triggerReveal();
+          });
+        }
+      }
+
+      // If video readyState is already populated when script executes
+      if (video.readyState >= 2) {
+        beginPlayback();
+      } else {
+        video.addEventListener('canplay', beginPlayback, { once: true });
+      }
+
+      // 4. REPLAY BUTTON CHOREOGRAPHY
+      if (btnReplay) {
+        btnReplay.addEventListener('click', () => {
+          isRevealed = false;
+          hasCapturedThumbnails = false;
+          hero.classList.remove('is-revealed');
+          
+          if (cardCanvas1) cardCanvas1.classList.remove('is-drawn');
+          if (cardCanvas2) cardCanvas2.classList.remove('is-drawn');
+          
+          video.currentTime = 0;
+          video.play().catch(() => triggerReveal());
+        });
+      }
+
+      // 5. BELOW-THE-FOLD INTERSECTION OBSERVER
+      const scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-in-view');
+          }
+        });
+      }, {
+        threshold: 0.18
+      });
+
+      document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+        scrollObserver.observe(el);
+      });
+
+    })();
+  </script>
+</body>
+</html>
