@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CT-1 pocket calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #ecebe6;
+    --desk-ink: #5a5954;
+
+    --metal-hi: #e6e5e1;
+    --metal: #d6d5d0;
+    --metal-lo: #b4b3ad;
+    --silk: #2a2a28;
+    --silk-soft: #6f6e69;
+    --orange: #ff5a1f;
+    --orange-glow: rgba(255, 90, 31, .65);
+
+    --lcd: #bdc6a8;
+    --lcd-ink: #1f261b;
+
+    --white: #f4f3ef;   --white-lo: #b3b2ab;
+    --coal: #2c2c2b;    --coal-lo: #0e0e0e;
+    --grey: #c6c5bf;    --grey-lo: #8c8b84;
+
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --desk: #181817; --desk-ink: #8d8c86; }
+  }
+  :root[data-theme="dark"] { --desk: #181817; --desk-ink: #8d8c86; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--desk);
+    color: var(--desk-ink);
+    font-family: "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px;
+    padding: 24px 12px;
+    overflow-x: hidden;
+  }
+
+  /* ---------- the device ---------- */
+  .device {
+    position: relative;
+    width: min(340px, 100%);
+    padding: 16px 16px 22px;
+    border-radius: 20px;
+    background: linear-gradient(170deg, var(--metal-hi), var(--metal) 40%, var(--metal) 80%, #cdccc7);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.8),
+      inset 0 -2px 0 rgba(0,0,0,.08),
+      0 2px 0 var(--metal-lo),
+      0 22px 40px rgba(0,0,0,.28),
+      0 4px 10px rgba(0,0,0,.16);
+    color: var(--silk);
+  }
+  .device::before {  /* brushed-aluminium grain */
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    opacity: .16; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .name b {
+    display: block;
+    font-family: "Archivo", system-ui, sans-serif; font-weight: 700;
+    font-size: 17px; letter-spacing: -.01em; line-height: 1;
+  }
+  .name span { font-size: 11px; color: var(--silk-soft); font-weight: 500; letter-spacing: .02em; }
+
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .switch {
+    appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0; margin: 0;
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    font: 500 11px "Archivo Narrow", system-ui, sans-serif; color: var(--silk-soft);
+  }
+  .switch .track {
+    width: 26px; height: 14px; border-radius: 3px; background: #8e8d87; position: relative;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.45);
+    transition: background .12s;
+  }
+  .switch .track::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 2px;
+    background: var(--white); box-shadow: 0 1px 1px rgba(0,0,0,.4);
+    transition: transform .12s;
+  }
+  .switch[aria-checked="true"] .track { background: var(--orange); }
+  .switch[aria-checked="true"] .track::after { transform: translateX(12px); }
+  .switch:focus-visible { outline: 2px solid var(--orange); outline-offset: 4px; border-radius: 3px; }
+
+  .grille {
+    width: 42px; height: 20px;
+    background-image: radial-gradient(circle, #77766f 1.3px, transparent 1.6px);
+    background-size: 6px 6px;
+    opacity: .85;
+  }
+
+  /* ---------- LCD ---------- */
+  .lcd-frame {
+    background: #1b1b1a; padding: 8px; border-radius: 9px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.7);
+  }
+  .lcd {
+    border-radius: 4px; overflow: hidden; position: relative;
+    box-shadow: inset 0 0 14px rgba(40,50,30,.45);
+    background: var(--lcd);
+  }
+  .lcd canvas { display: block; width: 100%; aspect-ratio: 64 / 17; }
+
+  /* ---------- step LEDs ---------- */
+  .leds { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; margin: 12px 2px 16px; }
+  .led {
+    height: 6px; border-radius: 2px; background: #94938d;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.35);
+  }
+  .led:nth-child(4n+1) { background: #85847e; }
+  .led.trail { background: rgba(255, 90, 31, .35); }
+  .led.on { background: var(--orange); box-shadow: 0 0 6px var(--orange-glow), inset 0 1px 0 rgba(255,255,255,.4); }
+
+  /* ---------- silkscreen ---------- */
+  .silk { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--silk); margin: 0 2px 6px; }
+  .silk i { flex: 1; height: 1px; background: var(--silk); opacity: .55; position: relative; }
+  .silk i::after {
+    content: ""; position: absolute; right: 0; top: -3px;
+    border-left: 5px solid var(--silk); border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; opacity: .9;
+  }
+
+  /* ---------- memory (round caps) ---------- */
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 10px; }
+  .mem-row { margin-bottom: 16px; }
+  .memkey {
+    appearance: none; -webkit-appearance: none; border: 0; background: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer;
+    font: 600 11px "Archivo Narrow", system-ui, sans-serif; color: var(--silk);
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
+  }
+  .memkey .cap {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #54544f, #2c2c2b 70%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 0 #0e0e0e, 0 5px 6px rgba(0,0,0,.3);
+    transition: transform .04s, box-shadow .04s;
+  }
+  .memkey:active .cap, .memkey.down .cap { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 0 #0e0e0e, 0 2px 3px rgba(0,0,0,.3); }
+  .memkey:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 8px; }
+
+  /* ---------- keys ---------- */
+  .keys { row-gap: 13px; column-gap: 10px; }
+  .key {
+    --k: var(--white); --k-lo: var(--white-lo); --k-ink: var(--silk);
+    position: relative;
+    appearance: none; -webkit-appearance: none; border: 0; margin: 0; padding: 0;
+    height: 54px; border-radius: 10px;
+    background: var(--k); color: var(--k-ink);
+    font-family: "Archivo", system-ui, sans-serif; font-weight: 500; font-size: 23px;
+    cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.65),
+      inset 0 -2px 0 rgba(0,0,0,.08),
+      0 3px 0 var(--k-lo),
+      0 6px 7px rgba(0,0,0,.22);
+    transition: transform .04s, box-shadow .04s, background-color .1s;
+  }
+  .key:active, .key.down {
+    transform: translateY(2px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.08), 0 1px 0 var(--k-lo), 0 2px 3px rgba(0,0,0,.2);
+  }
+  .key:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+  .key .sub {
+    position: absolute; top: 5px; left: 7px;
+    font: 600 9px/1 "Archivo Narrow", system-ui, sans-serif; letter-spacing: .02em;
+    opacity: .6; pointer-events: none;
+  }
+  .key.op   { --k: var(--coal);   --k-lo: var(--coal-lo);   --k-ink: var(--white); font-size: 25px; }
+  .key.fn   { --k: var(--grey);   --k-lo: var(--grey-lo);   --k-ink: var(--silk); font-size: 20px; }
+  .key.eq   { --k: var(--orange); --k-lo: #b83a0a;           --k-ink: #fff; font-size: 27px; }
+  .key.op.armed { --k: var(--orange); --k-lo: #b83a0a; --k-ink: #fff; }
+
+  .hint { font-size: 12px; font-weight: 500; letter-spacing: .02em; text-align: center; }
+
+  @media (max-width: 370px) {
+    .device { padding: 12px 12px 18px; }
+    .key { height: 50px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .key, .memkey .cap, .switch .track, .switch .track::after { transition: none; }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<main class="device" aria-label="CT-1 pocket calculator">
+  <div class="top">
+    <div class="name"><b>CT-1</b><span>pocket calculator</span></div>
+    <div class="top-right">
+      <button class="switch" id="sound" role="switch" aria-checked="true" aria-label="Key sounds">
+        <span class="track"></span><span>sound</span>
+      </button>
+      <div class="grille" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="lcd-frame">
+    <div class="lcd">
+      <canvas id="lcd" aria-hidden="true"></canvas>
+      <div class="sr" id="readout" role="status" aria-live="polite">0</div>
+    </div>
+  </div>
+
+  <div class="leds" id="leds" aria-hidden="true"></div>
+
+  <div class="silk" aria-hidden="true"><span>memory</span><i></i></div>
+  <div class="grid mem-row">
+    <button class="memkey" data-k="mc" aria-label="Memory clear"><span class="cap"></span>mc</button>
+    <button class="memkey" data-k="mr" aria-label="Memory recall"><span class="cap"></span>mr</button>
+    <button class="memkey" data-k="m-" aria-label="Memory subtract"><span class="cap"></span>m&minus;</button>
+    <button class="memkey" data-k="m+" aria-label="Memory add"><span class="cap"></span>m+</button>
+  </div>
+
+  <div class="grid keys">
+    <button class="key fn" data-k="ac" aria-label="All clear">AC<span class="sub">clear</span></button>
+    <button class="key fn" data-k="bs" aria-label="Backspace">&larr;<span class="sub">del</span></button>
+    <button class="key fn" data-k="%" aria-label="Percent">%<span class="sub">pct</span></button>
+    <button class="key op" data-k="/" aria-label="Divide">&divide;</button>
+
+    <button class="key" data-k="7">7<span class="sub">e5</span></button>
+    <button class="key" data-k="8">8<span class="sub">g5</span></button>
+    <button class="key" data-k="9">9<span class="sub">a5</span></button>
+    <button class="key op" data-k="*" aria-label="Multiply">&times;</button>
+
+    <button class="key" data-k="4">4<span class="sub">a4</span></button>
+    <button class="key" data-k="5">5<span class="sub">c5</span></button>
+    <button class="key" data-k="6">6<span class="sub">d5</span></button>
+    <button class="key op" data-k="-" aria-label="Subtract">&minus;</button>
+
+    <button class="key" data-k="1">1<span class="sub">d4</span></button>
+    <button class="key" data-k="2">2<span class="sub">e4</span></button>
+    <button class="key" data-k="3">3<span class="sub">g4</span></button>
+    <button class="key op" data-k="+" aria-label="Add">+</button>
+
+    <button class="key fn" data-k="neg" aria-label="Change sign">&plusmn;<span class="sub">sign</span></button>
+    <button class="key" data-k="0">0<span class="sub">c4</span></button>
+    <button class="key" data-k="." aria-label="Decimal point">.</button>
+    <button class="key eq" data-k="=" aria-label="Equals">=<span class="sub">enter</span></button>
+  </div>
+</main>
+
+<div class="hint">Keys play notes. Keyboard works too.</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= dot-matrix LCD ================= */
+  var COLS = 64, ROWS = 17, MAX_DIGITS = 9, CELLS = 10;
+  var canvas = document.getElementById("lcd");
+  var ctx = canvas.getContext("2d");
+  var css = getComputedStyle(document.documentElement);
+  var LCD_BG = css.getPropertyValue("--lcd").trim() || "#bdc6a8";
+  var INK = css.getPropertyValue("--lcd-ink").trim() || "#1f261b";
+
+  var FONT = {
+    "0": ["01110","10001","10011","10101","11001","10001","01110"],
+    "1": ["00100","01100","00100","00100","00100","00100","01110"],
+    "2": ["01110","10001","00001","00010","00100","01000","11111"],
+    "3": ["11110","00001","00001","01110","00001","00001","11110"],
+    "4": ["00010","00110","01010","10010","11111","00010","00010"],
+    "5": ["11111","10000","11110","00001","00001","10001","01110"],
+    "6": ["00110","01000","10000","11110","10001","10001","01110"],
+    "7": ["11111","00001","00010","00100","01000","01000","01000"],
+    "8": ["01110","10001","10001","01110","10001","10001","01110"],
+    "9": ["01110","10001","10001","01111","00001","00010","01100"],
+    "-": ["00000","00000","00000","11111","00000","00000","00000"],
+    "E": ["11111","10000","10000","11110","10000","10000","11111"],
+    " ": null
+  };
+  var MINI = {
+    "M": ["10001","11011","10101","10001","10001"],
+    "E": ["111","100","110","100","111"],
+    "C": ["111","100","100","100","111"],
+    "T": ["111","010","010","010","010"],
+    "1": ["010","110","010","010","111"],
+    "-": ["000","000","111","000","000"],
+    "+": ["000","010","111","010","000"],
+    "*": ["000","101","010","101","000"],
+    "/": ["010","000","111","000","010"]
+  };
+
+  function blit(buf, rows, x, y) {
+    if (!rows) return 0;
+    for (var r = 0; r < rows.length; r++)
+      for (var c = 0; c < rows[r].length; c++)
+        if (rows[r][c] === "1") {
+          var xx = x + c, yy = y + r;
+          if (xx >= 0 && xx < COLS && yy >= 0 && yy < ROWS) buf[yy * COLS + xx] = 1;
+        }
+    return rows[0].length;
+  }
+  function blitText(buf, str, x, y) {
+    for (var i = 0; i < str.length; i++) x += blit(buf, MINI[str[i]], x, y) + 1;
+  }
+
+  var ghost = new Uint8Array(COLS * ROWS);   // lamps that exist but are off
+  blit(ghost, MINI["M"], 2, 1);
+  blit(ghost, MINI["E"], 9, 1);
+
+  var buf = new Uint8Array(COLS * ROWS);
+  var booting = true, bootCol = 0;
+
+  function buildBuf(str, lampM, lampE, opKey) {
+    buf.fill(0);
+    // status row
+    if (lampM) blit(buf, MINI["M"], 2, 1);
+    if (lampE) blit(buf, MINI["E"], 9, 1);
+    if (opKey && MINI[opKey]) blit(buf, MINI[opKey], 15, 1);
+    blitText(buf, "CT-1", 47, 1);
+    // digits
+    var tokens = [];
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      if (ch === ".") { if (tokens.length) tokens[tokens.length - 1].dp = true; else tokens.push({ ch: "0", dp: true }); }
+      else tokens.push({ ch: ch, dp: false });
+    }
+    if (tokens.length > CELLS) tokens = tokens.slice(-CELLS);
+    var pad = CELLS - tokens.length;
+    for (var j = 0; j < tokens.length; j++) {
+      var x0 = 2 + (pad + j) * 6, y0 = 9;
+      blit(buf, FONT[tokens[j].ch], x0, y0);
+      if (tokens[j].dp) buf[(y0 + 6) * COLS + (x0 + 5)] = 1;
+    }
+  }
+
+  function draw() {
+    var w = canvas.clientWidth;
+    if (!w) return;
+    var dpr = window.devicePixelRatio || 1;
+    var W = Math.round(w * dpr), H = Math.round(W * ROWS / COLS);
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    var ps = W / COLS, inset = ps * 0.09, size = ps * 0.82, sh = ps * 0.3;
+
+    ctx.fillStyle = LCD_BG;
+    ctx.fillRect(0, 0, W, H);
+
+    var r, c, i, on;
+    // unlit pixels and unlit lamps
+    ctx.fillStyle = "rgba(31,38,27,.07)";
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++)
+      ctx.fillRect(c * ps + inset, r * ps + inset, size, size);
+    ctx.fillStyle = "rgba(31,38,27,.14)";
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++)
+      if (ghost[r * COLS + c]) ctx.fillRect(c * ps + inset, r * ps + inset, size, size);
+
+    function lit(rr, cc) {
+      if (booting && cc >= bootCol) return 1;
+      return buf[rr * COLS + cc];
+    }
+    // soft pixel shadow, like a real reflective LCD
+    ctx.fillStyle = "rgba(31,38,27,.16)";
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++)
+      if (lit(r, c)) ctx.fillRect(c * ps + inset + sh, r * ps + inset + sh, size, size);
+    ctx.fillStyle = INK;
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++)
+      if (lit(r, c)) ctx.fillRect(c * ps + inset, r * ps + inset, size, size);
+  }
+
+  if (window.ResizeObserver) new ResizeObserver(draw).observe(canvas);
+  window.addEventListener("resize", draw);
+
+  /* ================= step LEDs ================= */
+  var ledsEl = document.getElementById("leds");
+  var leds = [];
+  for (var li = 0; li < 16; li++) {
+    var d = document.createElement("span");
+    d.className = "led";
+    ledsEl.appendChild(d); leds.push(d);
+  }
+  var step = -1, sweepTimers = [];
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function ledStep() {
+    leds.forEach(function (l) { l.classList.remove("trail"); });
+    if (step >= 0) { leds[step].classList.remove("on"); leds[step].classList.add("trail"); }
+    step = (step + 1) % 16;
+    leds[step].classList.add("on");
+  }
+  function ledSweep() {
+    sweepTimers.forEach(clearTimeout); sweepTimers = [];
+    leds.forEach(function (l) { l.classList.remove("on", "trail"); });
+    if (reduceMotion) { leds[15].classList.add("on"); step = 15; return; }
+    for (var i = 0; i < 16; i++) (function (i) {
+      sweepTimers.push(setTimeout(function () {
+        leds.forEach(function (l) { l.classList.remove("on"); });
+        if (i > 0) leds[i - 1].classList.add("trail");
+        leds[i].classList.add("on");
+        step = i;
+      }, i * 16));
+    })(i);
+  }
+
+  /* ================= calculator logic ================= */
+  var entry = "0", acc = null, op = null, fresh = true;
+  var lastOp = null, lastVal = null, mem = 0, error = false;
+  var opKeys = document.querySelectorAll(".key.op");
+
+  function digitCount(s) { return s.replace(/[-.]/g, "").length; }
+  function val() { return parseFloat(entry) || 0; }
+
+  function fmt(n) {
+    if (!isFinite(n)) return "E";
+    n = parseFloat(n.toPrecision(12));
+    var neg = n < 0, a = Math.abs(n);
+    var intLen = a < 1 ? 1 : Math.floor(Math.log10(a)) + 1;
+    if (intLen > MAX_DIGITS) return "E";
+    var s = a.toFixed(Math.max(0, MAX_DIGITS - intLen));
+    if (s.replace(".", "").length > MAX_DIGITS) return "E";
+    if (s.indexOf(".") > -1) s = s.replace(/0+$/, "").replace(/\.$/, "");
+    if (s === "0") neg = false;
+    return (neg ? "-" : "") + s;
+  }
+  function compute(a, b, o) {
+    switch (o) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "*": return a * b;
+      case "/": return b === 0 ? NaN : a / b;
+    }
+    return b;
+  }
+  function setError() { error = true; entry = "0"; acc = null; op = null; fresh = true; lastOp = null; lastVal = null; }
+  function setResult(n) {
+    var s = fmt(n);
+    if (s === "E") { setError(); return false; }
+    entry = s; fresh = true; return true;
+  }
+
+  function render() {
+    var str = error ? "E" : entry;
+    buildBuf(str, mem !== 0, error, !error && op ? op : null);
+    document.getElementById("readout").textContent = error ? "Error" : str;
+    opKeys.forEach(function (k) { k.classList.toggle("armed", !error && op === k.dataset.k && fresh); });
+    draw();
+  }
+
+  function press(k) {
+    if (error && k !== "ac") return;
+
+    if (/^[0-9]$/.test(k)) {
+      if (op === null && lastOp !== null && fresh) lastOp = null;
+      if (fresh) { entry = k; fresh = false; }
+      else {
+        if (digitCount(entry) >= MAX_DIGITS) return;
+        entry = entry === "0" ? k : entry === "-0" ? "-" + k : entry + k;
+      }
+    } else if (k === ".") {
+      if (fresh) { entry = "0."; fresh = false; }
+      else if (entry.indexOf(".") === -1 && digitCount(entry) < MAX_DIGITS) entry += ".";
+    } else if (k === "+" || k === "-" || k === "*" || k === "/") {
+      if (op !== null && !fresh) {
+        if (!setResult(compute(acc, val(), op))) { render(); return; }
+        acc = parseFloat(entry);
+      } else if (op === null) { acc = val(); }
+      op = k; fresh = true; lastOp = null;
+    } else if (k === "=") {
+      var res;
+      if (op !== null) {
+        var b = val();
+        res = compute(acc, b, op);
+        lastOp = op; lastVal = b; op = null; acc = null;
+      } else if (lastOp !== null) {
+        res = compute(val(), lastVal, lastOp);
+      } else { render(); return; }
+      setResult(res);
+    } else if (k === "%") {
+      var v = val(), p;
+      if (op !== null && acc !== null && (op === "+" || op === "-")) p = acc * v / 100;
+      else p = v / 100;
+      setResult(p);
+    } else if (k === "neg") {
+      if (fresh) { if (!setResult(-val())) { render(); return; } fresh = true; }
+      else if (val() !== 0 || entry.indexOf(".") > -1) entry = entry[0] === "-" ? entry.slice(1) : "-" + entry;
+    } else if (k === "bs") {
+      if (fresh) return;
+      entry = entry.slice(0, -1);
+      if (entry === "" || entry === "-") entry = "0";
+    } else if (k === "ac") {
+      entry = "0"; acc = null; op = null; fresh = true; lastOp = null; lastVal = null; error = false;
+    } else if (k === "mc") { mem = 0;
+    } else if (k === "mr") { if (!setResult(mem)) { render(); return; }
+    } else if (k === "m+" || k === "m-") {
+      mem = parseFloat((mem + (k === "m+" ? 1 : -1) * val()).toPrecision(12));
+      fresh = true;
+    }
+    render();
+  }
+
+  /* ================= synth ================= */
+  var soundOn = true, audio = null, master = null;
+  var HZ = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+  var BASS = { "+": 130.81, "-": 146.83, "*": 164.81, "/": 196.0 };
+
+  function ensureAudio() {
+    if (!audio) {
+      audio = new (window.AudioContext || window.webkitAudioContext)();
+      master = audio.createGain(); master.gain.value = 0.9;
+      var comp = audio.createDynamicsCompressor();
+      master.connect(comp); comp.connect(audio.destination);
+    }
+    if (audio.state === "suspended") audio.resume();
+  }
+  function tone(freq, when, dur, type, vol, glideTo) {
+    var t = audio.currentTime + when;
+    var o = audio.createOscillator(), g = audio.createGain(), f = audio.createBiquadFilter();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+    f.type = "lowpass"; f.frequency.setValueAtTime(freq * 5, t); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function sound(k) {
+    if (!soundOn) return;
+    try {
+      ensureAudio();
+      if (/^[0-9]$/.test(k)) tone(HZ[+k], 0, 0.22, "triangle", 0.2);
+      else if (BASS[k]) { tone(BASS[k], 0, 0.2, "square", 0.09); tone(BASS[k] * 2, 0, 0.1, "triangle", 0.1); }
+      else if (k === "=") [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, i * 0.05, 0.2, "triangle", 0.16); });
+      else if (k === "ac") tone(700, 0, 0.16, "sawtooth", 0.07, 120);
+      else tone(1046.5, 0, 0.06, "triangle", 0.1);
+    } catch (e) { /* audio unavailable: stay silent */ }
+  }
+  function buzz() {
+    if (!soundOn) return;
+    try { ensureAudio(); tone(150, 0, 0.35, "sawtooth", 0.12, 55); } catch (e) {}
+  }
+  function feel() { if (navigator.vibrate) { try { navigator.vibrate(6); } catch (e) {} } }
+
+  function handle(k) {
+    var wasError = error;
+    sound(k); feel();
+    if (k === "=") ledSweep(); else ledStep();
+    press(k);
+    if (error && !wasError) buzz();
+  }
+
+  document.querySelector(".device").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-k]");
+    if (b) handle(b.dataset.k);
+  });
+
+  var sw = document.getElementById("sound");
+  sw.addEventListener("click", function () {
+    soundOn = !soundOn;
+    sw.setAttribute("aria-checked", String(soundOn));
+    if (soundOn) sound("5");
+  });
+
+  /* ================= keyboard ================= */
+  var KEYMAP = {
+    ",": ".", ".": ".", "+": "+", "-": "-", "*": "*", "x": "*", "X": "*", "/": "/",
+    "Enter": "=", "=": "=", "Backspace": "bs", "Escape": "ac", "Delete": "ac",
+    "c": "ac", "C": "ac", "%": "%"
+  };
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target && e.target.id === "sound") return;
+    var k = /^[0-9]$/.test(e.key) ? e.key : KEYMAP[e.key];
+    if (!k) return;
+    e.preventDefault();
+    var btn = document.querySelector('[data-k="' + k + '"]');
+    if (btn) { btn.classList.add("down"); setTimeout(function () { btn.classList.remove("down"); }, 90); }
+    handle(k);
+  });
+
+  /* ================= power-on: solid screen wipes away ================= */
+  render();
+  if (reduceMotion) {
+    booting = false; draw();
+  } else {
+    var t0 = performance.now() + 250, DUR = 700;
+    (function frame(t) {
+      var p = (t - t0) / DUR;
+      if (p >= 1) { booting = false; draw(); return; }
+      bootCol = p <= 0 ? 0 : Math.floor(p * COLS);
+      draw();
+      requestAnimationFrame(frame);
+    })(performance.now());
+  }
+})();
+</script>
+</body>
+</html>
